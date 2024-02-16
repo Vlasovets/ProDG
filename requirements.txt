@@ -1,1 +1,4 @@
-# Dependencies list
+pandas
+numpy
+statsmodels
+scipy
