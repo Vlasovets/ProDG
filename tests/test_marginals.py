@@ -1,7 +1,7 @@
 import unittest
 import pandas as pd
 import numpy as np
-from source.models import fit_nb, fit_poisson
+from source.models import fit_nb, fit_poisson, fit_zinb
 import statsmodels.api as sm
 from scipy.stats import chi2, logistic, nbinom
 from scipy.optimize import minimize
@@ -24,7 +24,7 @@ class TestMarginal(unittest.TestCase):
 
         The generated DataFrame is stored in the instance variable `self.df` for use in the test methods.
         """
-        size = 100  # size of the data
+        size = 1000  # size of the data
         n = 10  # number of successes for negative binomial
         p = 0.5  # probability of success for negative binomial and Poisson
         lambda_ = 5  # lambda parameter for Poisson
@@ -58,7 +58,7 @@ class TestMarginal(unittest.TestCase):
         up to a certain number of decimal places.
         """
         x = self.df['nb']
-        intercept = np.ones(len(x))
+        intercept = sm.add_constant(np.ones(len(x)))
 
         mle_nb = sm.NegativeBinomial(x, exog=intercept).fit()
 
@@ -87,7 +87,7 @@ class TestMarginal(unittest.TestCase):
         if the p-value of the likelihood ratio test is less than 0.05.
         """
         x = self.df['zip']
-        intercept = np.ones(len(x))
+        intercept = sm.add_constant(np.ones(len(x)))
 
         mle_zip = sm.ZeroInflatedPoisson(x, intercept).fit()
 
@@ -99,17 +99,127 @@ class TestMarginal(unittest.TestCase):
         self.assertAlmostEqual(test_zero_prob, zero_prob)
         self.assertAlmostEqual(test_mu, mu)
 
+    def test_zinb(self):
+        """
+
+        """
+        x = self.df['zinb']
+        intercept = sm.add_constant(np.ones(len(x)))
+
+        mle_zinb = sm.ZeroInflatedNegativeBinomialP(x, intercept).fit(method='nm', maxiter=5000, gtol=1e-12)
+
+        zero_prob = logistic.cdf(mle_zinb.params['inflate_const'])
+        theta_zinb= 1 / mle_zinb.params['alpha']
+        mu = np.exp(mle_zinb.params['const'])
+
+        test_zero_prob, test_theta_zinb, test_mu = fit_zinb(x)
+
+        self.assertAlmostEqual(test_zero_prob, zero_prob)
+        self.assertAlmostEqual(test_theta_zinb, theta_zinb)
+        self.assertAlmostEqual(test_mu, mu)
+
 
 if __name__ == '__main__':
     unittest.main()
 
 
-# mle_poisson = sm.GLM(x, intercept, family=sm.families.Poisson()).fit()
+# x = df['zinb']
+# intercept = sm.add_constant(np.ones(len(x)))
 
-# mle_zinb = sm.ZeroInflatedNegativeBinomialP(x, intercept).fit()
-# theta_zinb = 1 / mle_zinb.params['alpha']
-            
+# mle_zinb = sm.ZeroInflatedNegativeBinomialP(x, intercept).fit(method='bfgs', maxiter=5000, tol=1e-12)
+
 # [logistic.cdf(mle_zinb.params['inflate_const']), theta_zinb, np.exp(mle_zinb.params['const'])]
+
+
+# import pandas as pd
+# import numpy as np
+# import statsmodels.api as sm
+# import random
+# import warnings
+# import statsmodels.api as sm
+# from scipy.stats import nbinom
+
+
+# def run_model(seed):
+#     np.random.seed(seed)  # Set a seed for NumPy's random number generator
+#     random.seed(seed)  # Set a seed for Python's built-in random number generator
+
+#     size = 100  # size of the data
+#     n = 10  # number of successes for negative binomial
+#     p = 0.5  # probability of success for negative binomial and Poisson
+#     zero_prob = 0.5  # probability of zero for zero-inflated distributions
+
+#     zinb_data = nbinom.rvs(n, p, size=size)
+#     zinb_data[np.random.random(size) < zero_prob] = 0
+
+#     df = pd.DataFrame({
+#                 'nb': np.nan,
+#                 'zinb': zinb_data,
+#             })
+
+#     x = df['zinb']
+#     intercept = sm.add_constant(np.ones(len(x)))
+
+#     mle_zinb = sm.ZeroInflatedNegativeBinomialP(x, intercept).fit(method='bfgs', maxiter=5000, gtol=1e-12)
+#     return mle_zinb
+
+# # Run the model with different seeds
+# success_count = 0
+# total_count = 0
+
+# for seed in range(10):
+#     total_count += 1
+#     try:
+#         with warnings.catch_warnings():
+#             warnings.simplefilter("error")  # Treat warnings as exceptions
+#             result = run_model(seed)
+#             print(f"Seed {seed}: Success")
+#             success_count += 1
+#     except (Exception, Warning) as e:  # Catch both exceptions and warnings
+#         print(f"Seed {seed}: Failed with error {str(e)}")
+
+# success_percentage = (success_count / total_count) * 100
+# print(f"Success percentage: {success_percentage}%")
+
+
+# ### Generate random data
+# size = 100  # size of the data
+# n = 10  # number of successes for negative binomial
+# p = 0.5  # probability of success for negative binomial and Poisson
+# zero_prob = 0.5  # probability of zero for zero-inflated distributions
+
+# zinb_data = nbinom.rvs(n, p, size=size)
+# zinb_data[np.random.random(size) < zero_prob] = 0
+
+# df = pd.DataFrame({
+#             'nb': np.nan,
+#             'zinb': zinb_data,
+#         })
+        
+# x = df['zinb']
+# intercept = sm.add_constant(np.ones(len(x)))
+
+# x.value_counts()
+
+# mle_zinb = sm.ZeroInflatedNegativeBinomialP(x, intercept).fit(method='nm', maxiter=5000, gtol=1e-12)
+
+# theta_zinb = 1 / mle_zinb.params['alpha']
+
+# [logistic.cdf(mle_zinb.params['inflate_const']), theta_zinb, np.exp(mle_zinb.params['const'])]
+
+# mle_zinb.summary()
+
+
+
+
+
+
+# # mle_poisson = sm.GLM(x, intercept, family=sm.families.Poisson()).fit()
+
+# # mle_zinb = sm.ZeroInflatedNegativeBinomialP(x, intercept).fit()
+# # theta_zinb = 1 / mle_zinb.params['alpha']
+            
+# # [logistic.cdf(mle_zinb.params['inflate_const']), theta_zinb, np.exp(mle_zinb.params['const'])]
     
 
 
