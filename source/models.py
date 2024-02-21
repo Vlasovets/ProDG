@@ -35,7 +35,7 @@ def fit_poisson(x, intercept, pval_cutoff):
         else:
             return [0.0, np.inf, np.mean(x)]
         
-    except:
+    except Exception:
         return [0.0, np.inf, np.mean(x)]
 
 
@@ -58,7 +58,7 @@ def fit_nb(x):
     Reference: https://www.statsmodels.org/stable/discretemod.html
     """
     mu, var = np.mean(x), np.var(x)
-    intercept = np.ones(len(x))
+    intercept = sm.add_constant(np.ones(len(x)))
     
     if mu >= var: 
         # Poisson
@@ -72,7 +72,7 @@ def fit_nb(x):
         return [0.0, theta_nb, np.exp(mle_nb.params['const'])]
     
 
-def fit_zero_nb(x, pval_cutoff=0.05):
+def fit_zinb(x, pval_cutoff=0.05):
     """
     Fit a zero-inflated negative binomial (ZINB) model or related models to a given count data array.
 
@@ -92,29 +92,83 @@ def fit_zero_nb(x, pval_cutoff=0.05):
     """
     
     mu, var = np.mean(x), np.var(x)
-    intercept = np.ones(len(x))
+    intercept = sm.add_constant(np.ones(len(x)))
     
     if mu >= var:
         params = fit_poisson(x, intercept, pval_cutoff)
+
+        return params
     else:
         if np.min(x) > 0:
             #Negative binomial
             mle_nb = sm.NegativeBinomial(x, exog=intercept).fit()
-            theta_nb = 1 / mle_nb.params['alpha'] # i.e. use another notation
+            theta_nb = 1 / mle_nb.params['alpha']
             
             return [0.0, theta_nb, np.exp(mle_nb.params['const'])]
         
         else:
             try:
-                #Zer-inflated negative binomial
-                mle_zinb = sm.ZeroInflatedNegativeBinomialP(x, intercept).fit()
+                #Zero-inflated negative binomial
+                mle_zinb = sm.ZeroInflatedNegativeBinomialP(x, intercept).fit(method='nm', maxiter=5000, gtol=1e-12)
                 theta_zinb = 1 / mle_zinb.params['alpha']
                     
                 return [logistic.cdf(mle_zinb.params['inflate_const']), theta_zinb, np.exp(mle_zinb.params['const'])]
             
-            except:
+            except Exception:
                 #Negative binomial
                 mle_nb = sm.NegativeBinomial(x, exog=intercept).fit()
                 theta_nb = 1 / mle_nb.params['alpha']
                     
                 return [0.0, theta_nb, np.exp(mle_nb.params['const'])]
+            
+
+def fit_auto(x, pval_cutoff):
+    """
+    Fit parameters for a probability distribution to a given array of count data.
+
+    Parameters:
+    - x (array-like): An array of count data.
+    - pval_cutoff (float): The p-value cutoff for the likelihood ratio test.
+
+    Returns:
+    - list: A list containing the parameters [zero_prob, theta, lambda] of the fitted model.
+    - zero_prob (float): Probability of observing zero counts.
+    - theta (float): Dispersion parameter (inverse of alpha) for the negative binomial component.
+    - lambda (float): Mean parameter for the fitted probability distribution.
+
+    This function fits either a Poisson distribution or a zero-inflated negative binomial model to the count data `x` based on the likelihood ratio test. If the zero-inflated model is preferred, it returns the parameters for that model. Otherwise, it returns the parameters for a Poisson distribution or a negative binomial distribution, depending on the data characteristics.
+
+    Reference: https://www.statsmodels.org/stable/discretemod.html
+    """
+    mu, var = np.mean(x), np.var(x)
+    intercept = np.ones(len(x))
+    
+    if mu >= var:
+        #Poisson
+        params = fit_poisson(x, intercept, pval_cutoff)
+        return params
+    else:
+        #Negative binomial
+        mle_nb = sm.NegativeBinomial(x, exog=intercept).fit()
+        theta_nb = 1 / mle_nb.params['alpha'] # i.e. use another notation
+            
+        if np.min(x) > 0:
+            return [0.0, theta_nb, np.exp(mle_nb.params['const'])]
+        
+        else:
+            #Zero-inflated negative binomial
+            try:
+                mle_zinb = sm.ZeroInflatedNegativeBinomialP(x, intercept).fit(method='nm', maxiter=5000, gtol=1e-12)
+                theta_zinb = 1 / mle_zinb.params['alpha']
+                chisq_val = 2 * (mle_zinb.llf - mle_nb.llf)
+                pvalue = 1 - chi2.cdf(chisq_val, 1)
+                
+                if pvalue < pval_cutoff:
+                    # zero-inflation parameter 'inflate_const' is different from scDesign2
+                    return [logistic.cdf(mle_zinb.params['inflate_const']), theta_zinb, np.exp(mle_zinb.params['const'])]
+                else:
+                    return [0.0, theta_nb, np.exp(mle_nb.params['const'])]
+                
+            except Exception:
+                return [ 0.0, theta_nb, np.exp(mle_nb.params['const'])]
+

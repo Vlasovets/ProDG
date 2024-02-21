@@ -101,7 +101,9 @@ class TestMarginal(unittest.TestCase):
 
     def test_zinb(self):
         """
-
+        This test checks that the fit_zinb function correctly estimates the parameters of a zero-inflated Negative Binomial (NB) distribution.
+        The test generates a zero-inflated NB model using the statsmodels library, then compares the parameters estimated
+        by statsmodels with the parameters estimated by fit_zinb.
         """
         x = self.df['zinb']
         intercept = sm.add_constant(np.ones(len(x)))
@@ -121,124 +123,3 @@ class TestMarginal(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
-
-
-# x = df['zinb']
-# intercept = sm.add_constant(np.ones(len(x)))
-
-# mle_zinb = sm.ZeroInflatedNegativeBinomialP(x, intercept).fit(method='bfgs', maxiter=5000, tol=1e-12)
-
-# [logistic.cdf(mle_zinb.params['inflate_const']), theta_zinb, np.exp(mle_zinb.params['const'])]
-
-
-# import pandas as pd
-# import numpy as np
-# import statsmodels.api as sm
-# import random
-# import warnings
-# import statsmodels.api as sm
-# from scipy.stats import nbinom
-
-
-# def run_model(seed):
-#     np.random.seed(seed)  # Set a seed for NumPy's random number generator
-#     random.seed(seed)  # Set a seed for Python's built-in random number generator
-
-#     size = 100  # size of the data
-#     n = 10  # number of successes for negative binomial
-#     p = 0.5  # probability of success for negative binomial and Poisson
-#     zero_prob = 0.5  # probability of zero for zero-inflated distributions
-
-#     zinb_data = nbinom.rvs(n, p, size=size)
-#     zinb_data[np.random.random(size) < zero_prob] = 0
-
-#     df = pd.DataFrame({
-#                 'nb': np.nan,
-#                 'zinb': zinb_data,
-#             })
-
-#     x = df['zinb']
-#     intercept = sm.add_constant(np.ones(len(x)))
-
-#     mle_zinb = sm.ZeroInflatedNegativeBinomialP(x, intercept).fit(method='bfgs', maxiter=5000, gtol=1e-12)
-#     return mle_zinb
-
-# # Run the model with different seeds
-# success_count = 0
-# total_count = 0
-
-# for seed in range(10):
-#     total_count += 1
-#     try:
-#         with warnings.catch_warnings():
-#             warnings.simplefilter("error")  # Treat warnings as exceptions
-#             result = run_model(seed)
-#             print(f"Seed {seed}: Success")
-#             success_count += 1
-#     except (Exception, Warning) as e:  # Catch both exceptions and warnings
-#         print(f"Seed {seed}: Failed with error {str(e)}")
-
-# success_percentage = (success_count / total_count) * 100
-# print(f"Success percentage: {success_percentage}%")
-
-
-# ### Generate random data
-# size = 100  # size of the data
-# n = 10  # number of successes for negative binomial
-# p = 0.5  # probability of success for negative binomial and Poisson
-# zero_prob = 0.5  # probability of zero for zero-inflated distributions
-
-# zinb_data = nbinom.rvs(n, p, size=size)
-# zinb_data[np.random.random(size) < zero_prob] = 0
-
-# df = pd.DataFrame({
-#             'nb': np.nan,
-#             'zinb': zinb_data,
-#         })
-        
-# x = df['zinb']
-# intercept = sm.add_constant(np.ones(len(x)))
-
-# x.value_counts()
-
-# mle_zinb = sm.ZeroInflatedNegativeBinomialP(x, intercept).fit(method='nm', maxiter=5000, gtol=1e-12)
-
-# theta_zinb = 1 / mle_zinb.params['alpha']
-
-# [logistic.cdf(mle_zinb.params['inflate_const']), theta_zinb, np.exp(mle_zinb.params['const'])]
-
-# mle_zinb.summary()
-
-
-
-
-
-
-# # mle_poisson = sm.GLM(x, intercept, family=sm.families.Poisson()).fit()
-
-# # mle_zinb = sm.ZeroInflatedNegativeBinomialP(x, intercept).fit()
-# # theta_zinb = 1 / mle_zinb.params['alpha']
-            
-# # [logistic.cdf(mle_zinb.params['inflate_const']), theta_zinb, np.exp(mle_zinb.params['const'])]
-    
-
-
-# def neg_llf(alpha):
-#     try:
-#         model = sm.GLM(x, intercept, family=sm.families.NegativeBinomial(alpha=alpha)).fit()
-#         return -model.llf
-#     except:
-#         return np.inf
-
-# # Initial guess for alpha
-# alpha_init = 1.0
-
-# # Find the optimal alpha
-# result = minimize(neg_llf, alpha_init, bounds=[(0, 10)])
-
-# # Get the optimal alpha and dispersion
-# alpha_opt = result.x[0]
-# dispersion = 1 / alpha_opt
-
-# print("Naive Estimated alpha (dispersion parameter):", theta_nb)
-# print("GLM Estimated alpha (dispersion parameter):", dispersion)
