@@ -1,10 +1,9 @@
 import unittest
 import pandas as pd
 import numpy as np
-from source.models import fit_nb, fit_poisson, fit_zinb
+from source.models import fit_nb, fit_poisson, fit_zinb, fit_marginals
 import statsmodels.api as sm
-from scipy.stats import chi2, logistic, nbinom
-from scipy.optimize import minimize
+from scipy.stats import logistic, nbinom
 
 
 class TestMarginal(unittest.TestCase):
@@ -119,6 +118,31 @@ class TestMarginal(unittest.TestCase):
         self.assertAlmostEqual(test_zero_prob, zero_prob)
         self.assertAlmostEqual(test_theta_zinb, theta_zinb)
         self.assertAlmostEqual(test_mu, mu)
+
+    def test_fit_marginals_auto(self):
+        """
+        Test the fit_marginals function with 'auto' as the marginal parameter.
+
+        This test checks that the fit_marginals function correctly assigns inf values 
+        only to rows where the model is 'poisson'. It does this by calling fit_marginals 
+        with 'auto' as the marginal parameter, converting the returned parameters to a 
+        DataFrame, and checking for any inf values in rows where the model is not 'poisson'. 
+        If there are any such values, the test fails.
+        """
+        params = fit_marginals(self.df, marginal='auto', pval_cutoff=0.05)
+        
+        param_df= pd.DataFrame(params, columns=['zero_prob', 'theta', 'lambda', 'model'])
+
+        for col in ['zero_prob', 'theta', 'lambda']:
+            param_df[col] = pd.to_numeric(param_df[col], errors='coerce')
+
+        mask_model_not_poisson = param_df['model'] != 'poisson'
+        mask_inf_values = np.isinf(param_df[['zero_prob', 'theta', 'lambda']]).any(axis=1)
+
+        non_poisson_rows_with_inf = param_df[mask_model_not_poisson & mask_inf_values]
+
+        # assert that non_poisson_rows_with_inf is empty, i.e., all inf values are in rows where model is 'poisson'
+        self.assertTrue(non_poisson_rows_with_inf.empty)
 
 
 if __name__ == '__main__':
