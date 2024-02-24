@@ -129,19 +129,16 @@ class TestMarginal(unittest.TestCase):
         DataFrame, and checking for any inf values in rows where the model is not 'poisson'. 
         If there are any such values, the test fails.
         """
-        params = fit_marginals(self.df, marginal='auto', pval_cutoff=0.05)
-        
-        param_df= pd.DataFrame(params, columns=['zero_prob', 'theta', 'lambda', 'model'])
+        marginal = fit_marginals(self.df, marginal='auto', pval_cutoff=0.05)
 
-        for col in ['zero_prob', 'theta', 'lambda']:
-            param_df[col] = pd.to_numeric(param_df[col], errors='coerce')
+        marginal_df = pd.DataFrame(data=marginal['params'], columns=['zero_prob', 'theta', 'lambda'])
+        marginal_df['model'] = marginal['models']
 
-        mask_model_not_poisson = param_df['model'] != 'poisson'
-        mask_inf_values = np.isinf(param_df[['zero_prob', 'theta', 'lambda']]).any(axis=1)
+        mask_model_not_poisson = marginal_df['model'] != 'poisson'
+        mask_inf_values = np.isinf(marginal_df[['zero_prob', 'theta', 'lambda']]).any(axis=1)
 
-        non_poisson_rows_with_inf = param_df[mask_model_not_poisson & mask_inf_values]
+        non_poisson_rows_with_inf = marginal_df[mask_model_not_poisson & mask_inf_values]
 
-        # assert that non_poisson_rows_with_inf is empty, i.e., all inf values are in rows where model is 'poisson'
         self.assertTrue(non_poisson_rows_with_inf.empty)
 
 
