@@ -1,6 +1,9 @@
+import pandas as pd
 import numpy as np
 import statsmodels.api as sm
-from scipy.stats import chi2, logistic, nbinom
+from scipy.stats import chi2, logistic, norm
+from utils import uniform_to_marginal, estimate_null_parameters
+
 
 
 def fit_poisson(x, intercept, pval_cutoff):
@@ -137,16 +140,16 @@ def fit_auto(x, pval_cutoff, method_zinb='nm', maxiter_zinb=5000, gtol_zinb=1e-1
     
     if mu >= var:
         #Poisson
-        params = fit_poisson(x, intercept, pval_cutoff)
-        params.append('poisson')
-        return params
+        params, model = fit_poisson(x, intercept, pval_cutoff), 'poisson'
+        return {'params': params, 'model': model}
     else:
         #Negative binomial
         mle_nb = sm.NegativeBinomial(x, exog=intercept).fit()
         theta_nb = 1 / mle_nb.params['alpha']
             
         if np.min(x) > 0:
-            return [0.0, theta_nb, np.exp(mle_nb.params['const']), "nb"]
+            params, model = [0.0, theta_nb, np.exp(mle_nb.params['const'])], 'nb'
+            return {'params': params, 'model': model}
         
         else:
             #Zero-inflated negative binomial
@@ -154,15 +157,18 @@ def fit_auto(x, pval_cutoff, method_zinb='nm', maxiter_zinb=5000, gtol_zinb=1e-1
                 mle_zinb = sm.ZeroInflatedNegativeBinomialP(x, intercept).fit(method=method_zinb, maxiter=maxiter_zinb, gtol=gtol_zinb)
                 theta_zinb = 1 / mle_zinb.params['alpha']
                 chisq_val = 2 * (mle_zinb.llf - mle_nb.llf)
-                pvalue = 1 - chi2.cdf(chisq_val, 1)
+                pvalue = 1 - chi2.cdf(chisq_val, 1) # goodness of fit test
                 
                 if pvalue < pval_cutoff:
-                    return [logistic.cdf(mle_zinb.params['inflate_const']), theta_zinb, np.exp(mle_zinb.params['const']), "zinb"]
+                    params, model = [logistic.cdf(mle_zinb.params['inflate_const']), theta_zinb, np.exp(mle_zinb.params['const'])], 'zinb'
+                    return {'params': params, 'model': model}
                 else:
-                    return [0.0, theta_nb, np.exp(mle_nb.params['const'], "nb")]
+                    params, model = [0.0, theta_nb, np.exp(mle_nb.params['const'])], 'nb'
+                    return {'params': params, 'model': model}
                 
             except Exception:
-                return [0.0, theta_nb, np.exp(mle_nb.params['const']), "nb"]
+                params, model = [0.0, theta_nb, np.exp(mle_nb.params['const'])], 'nb'
+                return  {'params': params, 'model': model}
             
 
 def fit_marginals(X, marginal='auto', pval_cutoff=0.05):
@@ -176,19 +182,140 @@ def fit_marginals(X, marginal='auto', pval_cutoff=0.05):
     - pval_cutoff (float): The p-value cutoff for the likelihood ratio test. Only used when marginal='auto'. Default is 0.05.
 
     Returns:
-    - dict: A dictionary containing one key-value pair. The key is 'params' and the value is a 2D numpy array where each row represents a species and each column represents a parameter of the fitted model.
+    - dict: A dictionary containing two key-value pairs. The first key is 'params' and the value is a 2D numpy array where each row represents a species and each column represents a parameter of the fitted model. The second key is 'models' and the value is an array where each element represents the model fitted to a species.
 
     This function fits a specified model to each species in the count data. The model can be automatically chosen based on the data, or it can be manually specified as zero-inflated negative binomial ('zinb'), negative binomial ('nb'), or Poisson ('poisson').
     """
     p, _ = X.shape
-        
+    result_dict = dict()
+
     if marginal == 'auto':
-        params = np.array([fit_auto(X.iloc[i, :], pval_cutoff=pval_cutoff) for i in range(p)])
+        result = np.array([fit_auto(X.iloc[i, :], pval_cutoff=pval_cutoff) for i in range(p)])
+        params = np.array([item['params'] for item in result])
+        models = np.array([item['model'] for item in result])
     elif marginal == 'zinb':
         params = np.array([fit_zinb(X.iloc[i, :], pval_cutoff=pval_cutoff) for i in range(p)])
+        models = np.full(p, 'zinb')
     elif marginal == 'nb':
         params = np.array([fit_nb(X.iloc[i, :]) for i in range(p)])
+        models = np.full(p, 'nb')
     elif marginal == 'poisson':
         params = np.array([[0.0, np.inf, np.mean(X.iloc[i, :])] for i in range(p)])
+        models = np.full(p, 'poisson')
 
-    return params
+    result_dict['params'] = params
+    result_dict['models'] = models
+
+    return result_dict
+
+
+def generate_data(X, marginal, seed=42):
+    """
+    Fit a Gaussian copula to the given data.
+
+    Parameters:
+    - df (DataFrame): A DataFrame where each row represents a species and each column represents a sample.
+    - marginal (dict): A dictionary containing the parameters of the marginal distribution for each species.
+
+    Returns:
+    - ndarray: A 2D numpy array where each row represents a species and each column represents a sample. The values are the results of the distribution transformation.
+
+    This function fits a Gaussian copula to the given data based on the parameters of the marginal distribution for each species. It then performs a distribution transformation on the data and returns the results.
+    """
+    rng = np.random.default_rng(seed)
+    p, N = X.shape
+    params = estimate_null_parameters(X, marginal, cov_method="scaled", rng=rng)
+    sigma = params["R_est"]
+
+    Z = rng.multivariate_normal(mean=np.zeros(p), cov=sigma, size=N)
+    Z_cdf = norm.cdf(Z)
+
+    gen_data = uniform_to_marginal(Z_cdf, marginal)
+
+    return gen_data.T
+
+
+import seaborn as sns
+import matplotlib.pyplot as plt
+sns.heatmap(R_oracle, annot=True, fmt=".2f", cmap='coolwarm')
+
+plt.show()
+
+import seaborn as sns
+import matplotlib.pyplot as plt
+sns.heatmap(R_synthetic, annot=True, fmt=".2f", cmap='coolwarm')
+
+plt.show()
+
+
+test
+df
+
+R_oracle = np.corrcoef(df)
+R_synthetic = np.corrcoef(test)
+R_oracle - R_synthetic
+
+
+
+
+
+
+
+
+
+# rng = np.random.default_rng(1234)
+# F1 = calculate_cdf(counts + 1, mu, theta, zero_prob)
+
+# V = rng.uniform(0, 1, F.shape)
+
+# U = V * F + (1 - V) * F1
+
+# # Gaussian Copula
+# U_inv = norm.ppf(U, 0, 1)
+
+# R_est = np.corrcoef(U_inv.T)
+
+
+# def distribution_transform(X, marginal, jitter=True, epsilon=1e-5):
+#     """
+#     Perform a distribution transformation on the given data.
+
+#     Parameters:
+#     - X (DataFrame): A DataFrame where each row represents a species and each column represents a sample.
+#     - marginal (dict): A dictionary containing the parameters of the marginal distribution for each species.
+#     - jitter (bool): Whether to add jitter (random noise) to the data. Default is True.
+#     - epsilon (float): A small number used to adjust the results to avoid extreme values. Default is 1e-5.
+
+#     Returns:
+#     - ndarray: A 2D numpy array where each row represents a species and each column represents a sample. The values are the results of the distribution transformation.
+
+#     This function performs a distribution transformation on the given data. It calculates a weighted mixture of two quantities based on the parameters of the marginal distribution for each species. 
+#     The weights are determined by the `jitter` parameter. If `jitter` is True, the weights are random numbers uniformly distributed between 0 and 1. If `jitter` is False, the weights are 0.5. 
+#     The function then adjusts the results to avoid extreme values (i.e., values too close to 0, 1, or -1).
+#     """
+#     p, N = X.shape
+#     u = np.empty((p, N))
+
+#     for i in range(p):
+#         counts = X.values[i, :]
+#         zero_prob = marginal["params"][i][0]
+#         theta = marginal["params"][i][1]
+#         mu = marginal["params"][i][2]
+
+#         u1 = zero_prob + (1 - zero_prob) * nbinom.pmf(counts, theta, mu)
+#         u2 = (zero_prob + (1 - zero_prob) * nbinom.pmf(counts - 1, theta, mu)) * (counts > 0).astype(int)
+
+#         if jitter:
+#             v = np.random.uniform(size=N)
+#         else:
+#             v = np.full(N, 0.5)
+
+#         r = u1 * v + u2 * (1 - v)
+
+#         # adjust if r is too close to 0, 1 or -1
+#         ix_adj = np.where((1 - r < epsilon) | (r + 1 < epsilon) | (r < epsilon))
+#         r[ix_adj] += epsilon
+    
+#         u[i, :] = r
+    
+#     return u
