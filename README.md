@@ -13,7 +13,7 @@ ProDG is a Python library for generating synthetic data based on different proba
 You can install ProDG using pip:
 
 ```bash
-pip install prodg
+git clone https://github.com/Vlasovets/microbe-data-gen.git
 ```
 
 ## Usage
