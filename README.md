@@ -13,7 +13,7 @@ ProDG is a Python library for generating synthetic data based on different proba
 You can install ProDG using pip:
 
 ```bash
-pip install ProDG
+pip install prodg
 ```
 
 ## Usage
@@ -21,19 +21,19 @@ pip install ProDG
 Here is  a basic example of how to use ProDG:
 
 ```python
-from ProDG import DataGenerator
+from prodg import DataGenerator
 
-# Create a DataFrame where rows are bacterial species names and columns are sample names
-df = pd.DataFrame(np.random.randint(0,100,size=(100, 4)), index=['species' + str(i) for i in range(100)], columns=['samples' + str(i) for i in range(4)])
+# create a sample data where rows are bacterial species names and columns are sample names
+df = pd.DataFrame(np.random.randint(0,100,size=(100, 4)), columns=['Sample1', 'Sample2', 'Sample3', 'Sample4'])
 
-# Create an instance of the DataGenerator class
-generator = DataGenerator()
+# call generator instance
+prodg = DataGenerator()
 
 # Fit the models to the data
-generator.fit(df)
+prodg.fit(df)
 
 # Generate new data
-synthetic_data = generator.generate(df)
+synthetic_data = prodg.generate(df)
 
 # Print the synthetic data
 print(synthetic_data)
@@ -42,3 +42,4 @@ print(synthetic_data)
 ## License
 
 ProDG is licensed under the MIT License.
+
