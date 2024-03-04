@@ -1,7 +1,7 @@
 import unittest
 import pandas as pd
 import numpy as np
-from source.models import fit_nb, fit_poisson, fit_zinb, fit_marginals
+from source.generator import DataGenerator
 import statsmodels.api as sm
 from scipy.stats import logistic, nbinom
 
@@ -64,7 +64,9 @@ class TestMarginal(unittest.TestCase):
         theta_nb= 1 / mle_nb.params['alpha']
         mu = np.exp(mle_nb.params['const'])
 
-        _, test_theta_nb, test_mu = fit_nb(x)
+
+        generator = DataGenerator()
+        _, test_theta_nb, test_mu = generator.fit_nb(x)
 
         self.assertAlmostEqual(test_theta_nb, theta_nb)
         self.assertAlmostEqual(test_mu, mu)
@@ -93,7 +95,8 @@ class TestMarginal(unittest.TestCase):
         zero_prob = logistic.cdf(mle_zip.params['inflate_const'])
         mu = np.exp(mle_zip.params['const'])
 
-        test_zero_prob, _, test_mu = fit_poisson(x, intercept=intercept, pval_cutoff=0.05)
+        generator = DataGenerator()
+        test_zero_prob, _, test_mu = generator.fit_poisson(x, intercept=intercept, pval_cutoff=0.05)
 
         self.assertAlmostEqual(test_zero_prob, zero_prob)
         self.assertAlmostEqual(test_mu, mu)
@@ -113,7 +116,8 @@ class TestMarginal(unittest.TestCase):
         theta_zinb= 1 / mle_zinb.params['alpha']
         mu = np.exp(mle_zinb.params['const'])
 
-        test_zero_prob, test_theta_zinb, test_mu = fit_zinb(x)
+        generator = DataGenerator()
+        test_zero_prob, test_theta_zinb, test_mu = generator.fit_zinb(x)
 
         self.assertAlmostEqual(test_zero_prob, zero_prob)
         self.assertAlmostEqual(test_theta_zinb, theta_zinb)
@@ -129,7 +133,8 @@ class TestMarginal(unittest.TestCase):
         DataFrame, and checking for any inf values in rows where the model is not 'poisson'. 
         If there are any such values, the test fails.
         """
-        marginal = fit_marginals(self.df, marginal='auto', pval_cutoff=0.05)
+        generator = DataGenerator()
+        marginal = generator.fit_marginals(self.df, marginal='auto', pval_cutoff=0.05)
 
         marginal_df = pd.DataFrame(data=marginal['params'], columns=['zero_prob', 'theta', 'lambda'])
         marginal_df['model'] = marginal['models']
