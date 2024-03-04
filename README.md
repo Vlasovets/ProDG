@@ -1,6 +1,5 @@
 [![PyPI license](https://img.shields.io/pypi/l/gglasso.svg)](https://pypi.python.org/pypi/gglasso/)
-
-[![Python version](https://img.shields.io/badge/python-3.8%20%7C%203.9%20%7C%204.0-blue)](https://www.python.org/)
+[![Python version](https://img.shields.io/badge/python-3.8%2B-blue)](https://www.python.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 
