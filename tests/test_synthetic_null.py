@@ -1,7 +1,7 @@
 import unittest
 import pandas as pd
 import numpy as np
-from source.models import fit_marginals, generate_data
+from source.generator import DataGenerator
 from scipy.stats import nbinom
 
 
@@ -43,13 +43,14 @@ class TestSyntheticNull(unittest.TestCase):
         })
 
     def test_gaussian_copula(self):
-        marginal = fit_marginals(self.df, marginal='auto')
-        gen_data = generate_data(self.df, marginal)
+        generator = DataGenerator()
+        marginal = generator.fit_marginals(self.df, marginal='auto')
+        gen_data = generator.generate_data(self.df, marginal)
 
-        oracle_R = np.corrcoef(self, rowvar=False)
+        oracle_R = np.corrcoef(self.df, rowvar=False)
         gen_R = np.corrcoef(gen_data, rowvar=False)
 
-        assert np.allclose(oracle_R, gen_R, atol=0.1), "The correlation matrices of the original and synthetic data are not close enough."
+        self.assertTrue(np.allclose(oracle_R, gen_R, atol=0.1), "The correlation matrices of the original and synthetic data are not close enough.")
 
 
 if __name__ == '__main__':
