@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 import statsmodels.api as sm
 from scipy.stats import chi2, logistic, norm
-from utils import uniform_to_marginal, estimate_null_parameters
+from source.utils import uniform_to_marginal, estimate_null_parameters
 
 class DataGenerator:
     def __init__(self, marginal='auto', pval_cutoff=0.05, seed=42):
@@ -263,16 +263,3 @@ class DataGenerator:
             raise Exception("You need to call fit() before generate().")
         generated_data = self.generate_data(X, self.marginal, self.seed)
         return pd.DataFrame(generated_data, columns=X.columns)
-    
-
-# Assume we have some data in a DataFrame called `df`
-df = pd.DataFrame(np.random.randint(0,100,size=(100, 4)), columns=list('ABCD'))
-
-# Create an instance of the DataGenerator class
-generator = DataGenerator()
-
-# Fit the models to the data
-generator.fit(df)
-
-# Generate new data
-new_data = generator.generate(df)
