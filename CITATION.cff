@@ -1,8 +1,8 @@
-format: https://doi.org/10.17613/M6W3CV
-title: microbe-data-gen
+format: https://doi.org
+title: Prokaryotic Data Generator
 version: 0.1
 authors:
-  - Family Names: 
-    Given Names: 
-    orcid: 
-date-released: yyyy-mm-dd
+  - Last Names: Vlasovets
+    First Names: Oleg
+    orcid: 0000-0001-5259-9674
+date-released: 2024-03-08
