@@ -262,4 +262,5 @@ class DataGenerator:
         if self.marginal is None:
             raise Exception("You need to call fit() before generate().")
         generated_data = self.generate_data(X, self.marginal, self.seed)
+        
         return pd.DataFrame(generated_data, columns=X.columns)
