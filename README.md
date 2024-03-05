@@ -1,15 +1,14 @@
-[![PyPI license](https://img.shields.io/pypi/l/gglasso.svg)](https://pypi.python.org/pypi/gglasso/)
 [![Python version](https://img.shields.io/badge/python-3.8%2B-blue)](https://www.python.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 
 # ProDG: Prokaryotic Data Generator
 
-ProDG is a Python library for generating synthetic data based on different probability distributions. It's specifically designed for prokaryotic data but can be used for any type of data.
+ProDG is a Python library for generating synthetic data based on different probability distributions. It's specifically designed for prokaryotic data but can be used for any zero-inflated [compositional](https://en.wikipedia.org/wiki/Compositional_data) data.
 
 ## Installation
 
-You can install ProDG using pip:
+You can install ProDG using:
 
 ```bash
 git clone https://github.com/Vlasovets/microbe-data-gen.git
@@ -41,4 +40,3 @@ print(synthetic_data)
 ## License
 
 ProDG is licensed under the MIT License.
-
