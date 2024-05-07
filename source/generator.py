@@ -138,10 +138,10 @@ class DataGenerator:
 
         Reference: https://www.statsmodels.org/stable/discretemod.html
         """
-        mu, var = np.mean(X), np.var(X)
+        mu, var = np.mean(X), np.var(X) # TO DO: switch from empirical mean to the mean of non zeros
         intercept = np.ones(len(X))
         
-        if mu >= var:
+        if mu >= var: ## TO DO: this creteria is meaningless for microbial data becuase the data is always overdispersed
             #Poisson
             params, model = self.fit_poisson(X, intercept, pval_cutoff), 'poisson'
             return {'params': params, 'model': model}
@@ -178,7 +178,7 @@ class DataGenerator:
         Fit a specified model to each species in the given count data.
 
         Parameters:
-        - X (DataFrame): A DataFrame where each row represents a species and each column represents a sample.
+        - X (DataFrame): A DataFrame where each row represents a species (p) and each column represents a sample (N).
         - marginal (str): The model to fit to each species. Options are 'auto', 'zinb', 'nb', and 'poisson'. 
                         'auto' will automatically choose the best model based on the data. Default is 'auto'.
         - pval_cutoff (float): The p-value cutoff for the likelihood ratio test. Only used when marginal='auto'. Default is 0.05.
@@ -188,22 +188,22 @@ class DataGenerator:
 
         This function fits a specified model to each species in the count data. The model can be automatically chosen based on the data, or it can be manually specified as zero-inflated negative binomial ('zinb'), negative binomial ('nb'), or Poisson ('poisson').
         """
-        p, _ = X.shape
+        _, N = X.shape
         result_dict = dict()
 
         if marginal == 'auto':
-            result = np.array([self.fit_auto(X.iloc[i, :], pval_cutoff=pval_cutoff) for i in range(p)])
+            result = np.array([self.fit_auto(X.loc[i], pval_cutoff=pval_cutoff) for i in range(N)])
             params = np.array([item['params'] for item in result])
             models = np.array([item['model'] for item in result])
         elif marginal == 'zinb':
-            params = np.array([self.fit_zinb(X.iloc[i, :], pval_cutoff=pval_cutoff) for i in range(p)])
-            models = np.full(p, 'zinb')
+            params = np.array([self.fit_zinb(X.loc[i], pval_cutoff=pval_cutoff) for i in range(N)])
+            models = np.full(N, 'zinb')
         elif marginal == 'nb':
-            params = np.array([self.fit_nb(X.iloc[i, :]) for i in range(p)])
-            models = np.full(p, 'nb')
+            params = np.array([self.fit_nb(X.loc[i]) for i in range(N)])
+            models = np.full(N, 'nb')
         elif marginal == 'poisson':
-            params = np.array([[0.0, np.inf, np.mean(X.iloc[i, :])] for i in range(p)])
-            models = np.full(p, 'poisson')
+            params = np.array([[0.0, np.inf, np.mean(X.loc[:, i])] for i in range(N)])
+            models = np.full(N, 'poisson')
 
         result_dict['params'] = params
         result_dict['models'] = models
